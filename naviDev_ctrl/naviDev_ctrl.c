@@ -191,9 +191,11 @@ int main (int argc,char** argv)
                     return -1;
                 }   
                 i = 0;
+
                 /* the AFC default range is not used, so we set it to 0 */
                 configHAT.rcv[0].afcRangeDefault = 0;
                 configHAT.rcv[1].afcRangeDefault = 0;
+
                 while(fgets((char*)buf, sizeof(buf), fd_param) != NULL && i <= 13)
                 {
                     for(k = 0; k < strlen((char*)buf); k++)
