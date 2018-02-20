@@ -11,6 +11,7 @@ Features:
 * reading/reseting statistics
 * enabling/disabling GNSS
 * configuring the HAT
+* enable/disable write protection of ID EEPROM
 
 
 Si7020-A20
@@ -21,4 +22,12 @@ Reading humidity and temperature.
 MS5607-02BA03
 -------------
 Reading pressure and temperature.
+
+MPU-9250
+--------
+Reading device ID and temperature.
+
+check_functionality
+-------------------
+Script to test the sensors by initiating a measurement.
 

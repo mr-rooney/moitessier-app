@@ -48,13 +48,14 @@
 
 
 #define IOC_MAGIC 'N'
-#define IOCTL_CMDs                  6
+#define IOCTL_CMDs                  7
 #define IOCTL_GET_STATISTICS        _IO(IOC_MAGIC,0)
 #define IOCTL_GET_INFO              _IO(IOC_MAGIC,1)
 #define IOCTL_RESET_HAT             _IO(IOC_MAGIC,2)
 #define IOCTL_RESET_STATISTICS      _IO(IOC_MAGIC,3)
 #define IOCTL_GNSS                  _IO(IOC_MAGIC,4)
 #define IOCTL_CONFIG                _IO(IOC_MAGIC,5)
+#define IOCTL_ID_EEPROM             _IO(IOC_MAGIC,6)
 
 #define NUM_RCV_CHANNELS            2       /* number of receiver channels per receiver, should be 2 */
 #define NUM_RCV                     2       /* number of receivers, should be 2 */
@@ -97,6 +98,7 @@ struct st_info{
     struct st_info_serial       serial;
     struct st_info_rcv          rcv[NUM_RCV];
     struct st_simulator         simulator;
+    uint8_t                     wpEEPROM;
     bool        valid;
 };
 
@@ -107,11 +109,13 @@ struct st_statistics{
     uint64_t                fifoBytesProcessed;
     uint64_t                payloadCrcErrors;
     uint64_t                headerCrcErrors;
+    uint64_t                keepAliveErrors;
 };
 
 struct st_configHAT{
     struct st_receiverConfig    rcv[NUM_RCV];
     struct st_simulator         simulator;
+    uint8_t                     wpEEPROM;
 };
 
 
@@ -137,13 +141,15 @@ int main (int argc,char** argv)
     {
         printf("ERROR: missing parameters\n");
         printf("Usage: ./naviDev_ctrl.o <DEVICE> <CMD_NR> <PARAM> <PARAM> ... <PARAM>\n");
-        printf("\tRead HAT statistics:\t ./naviDev_ctrl.o /dev/naviDev.ctrl 0\n");
-        printf("\tGet HAT info:\t\t ./naviDev_ctrl.o /dev/naviDev.ctrl 1\n");
-        printf("\tReset HAT:\t\t ./naviDev_ctrl.o /dev/naviDev.ctrl 2\n");
-        printf("\tReset HAT statistics:\t ./naviDev_ctrl.o /dev/naviDev.ctrl 3\n");
-        printf("\tEnable GNSS:\t\t ./naviDev_ctrl.o /dev/naviDev.ctrl 4 1\n");
-        printf("\tDisable GNSS:\t\t ./naviDev_ctrl.o /dev/naviDev.ctrl 4 0\n");
-        printf("\tConfigure HAT:\t\t ./naviDev_ctrl.o /dev/naviDev.ctrl 5 config.txt\n");
+        printf("\tRead HAT statistics:\t\t\t ./naviDev_ctrl.o /dev/naviDev.ctrl 0\n");
+        printf("\tGet HAT info:\t\t\t\t ./naviDev_ctrl.o /dev/naviDev.ctrl 1\n");
+        printf("\tReset HAT:\t\t\t\t ./naviDev_ctrl.o /dev/naviDev.ctrl 2\n");
+        printf("\tReset HAT statistics:\t\t\t ./naviDev_ctrl.o /dev/naviDev.ctrl 3\n");
+        printf("\tEnable GNSS:\t\t\t\t ./naviDev_ctrl.o /dev/naviDev.ctrl 4 1\n");
+        printf("\tDisable GNSS:\t\t\t\t ./naviDev_ctrl.o /dev/naviDev.ctrl 4 0\n");
+        printf("\tConfigure HAT:\t\t\t\t ./naviDev_ctrl.o /dev/naviDev.ctrl 5 config.txt\n");
+        printf("\tEnable ID EEPROM write protection:\t ./naviDev_ctrl.o /dev/naviDev.ctrl 6 1\n");
+        printf("\tDisable ID EEPROM write protection:\t ./naviDev_ctrl.o /dev/naviDev.ctrl 6 0\n");
         return -1;
     }
     
@@ -196,7 +202,7 @@ int main (int argc,char** argv)
                 configHAT.rcv[0].afcRangeDefault = 0;
                 configHAT.rcv[1].afcRangeDefault = 0;
 
-                while(fgets((char*)buf, sizeof(buf), fd_param) != NULL && i <= 13)
+                while(fgets((char*)buf, sizeof(buf), fd_param) != NULL && i <= 14)
                 {
                     for(k = 0; k < strlen((char*)buf); k++)
                     {
@@ -248,6 +254,9 @@ int main (int argc,char** argv)
                         case 13:
                             configHAT.simulator.mmsi[1] = (uint32_t)atoi((char*)buf);
                             break;
+                        case 14:
+                            configHAT.wpEEPROM = (uint8_t)atoi((char*)buf);
+                            break;
                         default:
                             break;
                     }
@@ -256,6 +265,10 @@ int main (int argc,char** argv)
                 fclose(fd_param);
                 memset(buf, 0, sizeof(buf));
                 memcpy(buf, &configHAT, sizeof(struct st_configHAT));
+                break;
+            case 6:
+                ioctlCmd = IOCTL_ID_EEPROM;
+                buf[0] = (char)params[0];
                 break;
             default:
                 break;
@@ -274,6 +287,7 @@ int main (int argc,char** argv)
                 printf("fifoBytesProcessed - %lu\n", (long unsigned int)statistics->fifoBytesProcessed);
                 printf("payloadCrcErrors - %lu\n", (long unsigned int)statistics->payloadCrcErrors);
                 printf("headerCrcErrors - %lu\n", (long unsigned int)statistics->headerCrcErrors);
+                printf("keepAliveErrors - %lu\n", (long unsigned int)statistics->keepAliveErrors);
                 break;
             case 1:
                 info = (struct st_info*)buf;
@@ -304,10 +318,12 @@ int main (int argc,char** argv)
                     printf("\tdefault afc range [Hz]:\t\t %u\n", (unsigned int)info->rcv[1].config.afcRangeDefault);
                     printf("\trng:\t\t\t\t 0x%02x 0x%02x\n", (unsigned int)info->rcv[1].rng[0], (unsigned int)info->rcv[1].rng[1]);
                     printf("simulator\n");
-                    printf("\tenabled:\t %u\n", (unsigned int)info->simulator.enabled);
-                    printf("\tinterval:\t %u\n", (unsigned int)info->simulator.interval);
-                    printf("\tmmsi:\t\t %09u %09u\n", (unsigned int)info->simulator.mmsi[0], (unsigned int)info->simulator.mmsi[1]);
-                
+                    printf("\tenabled:\t\t\t %u\n", (unsigned int)info->simulator.enabled);
+                    printf("\tinterval:\t\t\t %u\n", (unsigned int)info->simulator.interval);
+                    printf("\tmmsi:\t\t\t\t %09u %09u\n", (unsigned int)info->simulator.mmsi[0], (unsigned int)info->simulator.mmsi[1]);
+                    printf("misc\n");
+                    printf("\twrite protection ID EEPROM:\t %u\n", (unsigned int)info->wpEEPROM);
+                    
                     if(info->systemErrors)
                         printf("\n\n***** SYSTEM ERRORS HAVE OCCURRED *****\n\n");
                 }
@@ -339,9 +355,12 @@ int main (int argc,char** argv)
                 printf("\tmeta data mask:\t\t\t 0x%02x\n", (unsigned int)configHAT.rcv[1].metaDataMask);
                 printf("\tafc range [Hz]:\t\t\t %u\n", (unsigned int)configHAT.rcv[1].afcRange);
                 printf("simulator\n");
-                printf("\tenabled:\t %u\n", (unsigned int)configHAT.simulator.enabled);
-                printf("\tinterval:\t %u\n", (unsigned int)configHAT.simulator.interval);
-                printf("\tmmsi:\t\t %09u %09u\n", (unsigned int)configHAT.simulator.mmsi[0], (unsigned int)configHAT.simulator.mmsi[1]);
+                printf("\tenabled:\t\t\t %u\n", (unsigned int)configHAT.simulator.enabled);
+                printf("\tinterval:\t\t\t %u\n", (unsigned int)configHAT.simulator.interval);
+                printf("\tmmsi:\t\t\t\t %09u %09u\n", (unsigned int)configHAT.simulator.mmsi[0], (unsigned int)configHAT.simulator.mmsi[1]);
+                printf("misc\n");
+                printf("\twrite protection ID EEPROM:\t %u\n", (unsigned int)configHAT.wpEEPROM);
+                
                 break;
             default:
                 break;
