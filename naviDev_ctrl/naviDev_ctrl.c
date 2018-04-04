@@ -23,14 +23,14 @@
     Compiling
     =========
     
-    arm-linux-gnueabihf-gcc -Wall naviDev_ctrl.c -o naviDev_ctrl.o
+    arm-linux-gnueabihf-gcc -Wall naviDev_ctrl.c -o naviDev_ctrl
     
     Usage
     =====
     
     Get help and supported commands: 
     
-    ./naviDev_ctrl.o
+    ./naviDev_ctrl
     
 */
 

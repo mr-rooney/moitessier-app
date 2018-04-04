@@ -24,12 +24,12 @@
     Compiling
     =========
     
-    arm-linux-gnueabihf-gcc -Wall Si7020-A20.c -o Si7020-A20.o
+    arm-linux-gnueabihf-gcc -Wall Si7020-A20.c -o Si7020-A20
     
     Usage
     =====
     
-    ./Si7020-A20.o
+    ./Si7020-A20
     
 */
 

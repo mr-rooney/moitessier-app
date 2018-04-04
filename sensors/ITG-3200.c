@@ -1,5 +1,7 @@
 /*
-    User space program to check communication with the MPU-9250 sensor.
+    User space program to check communication with the ITG-3200 sensor connected to
+    the IO expansion header. You need to use i2c-gpio-param (GPIO bitbanged I2C) to
+    communicate with the sensor.
     This source code is for demonstation purpose only.
     
     Copyright (C) 2018  Thomas POMS <hwsw.development@gmail.com>
@@ -23,12 +25,14 @@
     Compiling
     =========
     
-    arm-linux-gnueabihf-gcc -Wall MPU-9250.c -o MPU-9250
+    arm-linux-gnueabihf-gcc -Wall ITG-3200.c -o ITG-3200
     
     Usage
     =====
     
-    ./MPU-9250
+    sudo insmod i2c-gpio-param.ko
+    echo 5 26 20 > /sys/class/i2c-gpio/add_bus
+    ./ITG-3200
     
 */
 
@@ -42,14 +46,15 @@
 #include <stdint.h>
 
 #define I2C_ADDR                    0x68                /* slave address of the sensor */
-#define I2C_BUS                     "/dev/i2c-1"        /* I2C bus where the sensor is connected to */
-#define REG_WHO_AM_I                117
-#define REG_TEMPERATURE             65
+#define I2C_BUS                     "/dev/i2c-5"        /* I2C bus where the sensor is connected to */
+#define REG_WHO_AM_I                0
+#define REG_TEMPERATURE             0x1B
  
 int main (void) {
 	uint8_t buffer[4];
 	int fd;
     double temp;
+    int16_t raw;
 
 	fd = open(I2C_BUS, O_RDWR);
 
@@ -69,14 +74,15 @@ int main (void) {
 	buffer[0]=REG_WHO_AM_I;
     write(fd, buffer, 1);
 	read(fd, buffer, 1);
-	printf("Device ID: 0x%02X - %s\n", buffer[0], (buffer[0] == 0x71) ? "MPU-9250" : (buffer[0] == 0x73) ? "MPU-9255" : "failure");
+	printf("Device ID: 0x%02X - %s\n", buffer[0], (buffer[0] == (I2C_ADDR + 1)) ? "ITG-3200 found" : "ITG-3200 not found");
     
     while(1)
     {
         buffer[0]=REG_TEMPERATURE;
         write(fd, buffer, 1);
 	    read(fd, buffer, 2);
-        temp = (double)(((uint16_t)buffer[0] << 8) | buffer[1]) / 333.87 + 21;
+        raw = (buffer[0] << 8) | (buffer[1]);
+        temp = (double)raw / 280 + 82.142857;
         printf("%.2f °C\n", temp);
         sleep(1);
     }

@@ -24,12 +24,12 @@
     Compiling
     =========
     
-    arm-linux-gnueabihf-gcc -Wall MS5607-02BA03.c -o MS5607-02BA03.o
+    arm-linux-gnueabihf-gcc -Wall MS5607-02BA03.c -o MS5607-02BA03
     
     Usage
     =====
     
-    ./MS5607-02BA03.o
+    ./MS5607-02BA03
     
 */
 

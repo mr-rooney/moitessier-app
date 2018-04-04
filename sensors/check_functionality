@@ -1,18 +1,18 @@
 #!/bin/bash
 
 echo "********** MS5607-02BA03 **********"
-./MS5607-02BA03.o &
+./MS5607-02BA03 &
 sleep 3
-pid=$(pidof MS5607-02BA03.o)
+pid=$(pidof MS5607-02BA03)
 kill -9 $pid
 echo "********** MPU-9250 **********"
-./MPU-9250.o &
+./MPU-9250 &
 sleep 3
-pid=$(pidof MPU-9250.o)
+pid=$(pidof MPU-9250)
 kill -9 $pid
 echo "********** Si7020-A20 **********"
-./Si7020-A20.o &
+./Si7020-A20 &
 sleep 3
-pid=$(pidof Si7020-A20.o)
+pid=$(pidof Si7020-A20)
 kill -9 $pid
 
