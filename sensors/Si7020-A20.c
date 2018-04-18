@@ -1,7 +1,8 @@
 /*
     User space program to read temperature and humidity from the Silicon Labs
-    Si7020-A20 sensor.
-    This source code is for demonstation purpose only.
+    Si7020-A20 sensor available on the Moitessier HAT.
+    This source code is for demonstation purpose only and was tested
+    on a Raspberry Pi 3 Model B.
     
     Copyright (C) 2018  Thomas POMS <hwsw.development@gmail.com>
     

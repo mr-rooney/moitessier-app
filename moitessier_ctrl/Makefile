@@ -1,17 +1,21 @@
 # https://sites.google.com/site/michaelsafyan/software-engineering/how-to-write-a-makefile
+#
+# Usage:
+#   make                    if default compiler specified in this file should be used
+#   make CC=gcc             if different compiler should be used
 
-program_NAME := naviDev_ctrl
-program_C_SRCS := $(wildcard *.c)
-program_CXX_SRCS := $(wildcard *.cpp)
+program_NAME := moitessier_ctrl
+program_C_SRCS := $(wildcard *.c) $(wildcard */*.c)
+program_CXX_SRCS := $(wildcard *.cpp) 
 program_C_OBJS := ${program_C_SRCS:.c=.o}
 program_CXX_OBJS := ${program_CXX_SRCS:.cpp=.o}
 program_OBJS := $(program_C_OBJS) $(program_CXX_OBJS)
-program_INCLUDE_DIRS :=
+program_INCLUDE_DIRS := ezxml
 program_LIBRARY_DIRS :=
 program_LIBRARIES :=
-CC=arm-linux-gnueabihf-gcc
-COPY_LIST := config.txt
+COPY_LIST := *.xml
 OUT_DIR := bin
+CC := arm-linux-gnueabihf-gcc
 
 CPPFLAGS += $(foreach includedir,$(program_INCLUDE_DIRS),-I$(includedir))
 LDFLAGS += $(foreach librarydir,$(program_LIBRARY_DIRS),-L$(librarydir))

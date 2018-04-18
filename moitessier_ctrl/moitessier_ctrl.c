@@ -1,6 +1,7 @@
 /*
-    User space program to configure/control the nav.HAT.
-    This source code is for demonstation purpose only.
+    User space program to configure/control the Moitessier HAT.
+    This source code is for demonstation purpose only and was tested
+    on a Raspberry Pi 3 Model B.
     
     Copyright (C) 2018  Thomas POMS <hwsw.development@gmail.com>
     
@@ -23,14 +24,14 @@
     Compiling
     =========
     
-    arm-linux-gnueabihf-gcc -Wall naviDev_ctrl.c -o naviDev_ctrl
+    arm-linux-gnueabihf-gcc -Wall moitessier_ctrl.c -o moitessier_ctrl
     
     Usage
     =====
     
     Get help and supported commands: 
     
-    ./naviDev_ctrl
+    ./moitessier_ctrl
     
 */
 
@@ -45,6 +46,7 @@
 #include <stropts.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include "ezxml/ezxml.h"
 
 
 #define IOC_MAGIC 'N'
@@ -121,7 +123,7 @@ struct st_configHAT{
 
 int main (int argc,char** argv)
 {
-    int fd_navidev;
+    int fd_moitessier;
     int cmd = 0;
     int ioctlCmd = 0;
     int size;
@@ -131,6 +133,7 @@ int main (int argc,char** argv)
     uint32_t k;
     FILE *fd_param;
     char* fileName;
+    ezxml_t xml;
     
     struct st_info *info;
     struct st_statistics *statistics;
@@ -140,30 +143,30 @@ int main (int argc,char** argv)
     if(argc < 3)
     {
         printf("ERROR: missing parameters\n");
-        printf("Usage: ./naviDev_ctrl.o <DEVICE> <CMD_NR> <PARAM> <PARAM> ... <PARAM>\n");
-        printf("\tRead HAT statistics:\t\t\t ./naviDev_ctrl.o /dev/naviDev.ctrl 0\n");
-        printf("\tGet HAT info:\t\t\t\t ./naviDev_ctrl.o /dev/naviDev.ctrl 1\n");
-        printf("\tReset HAT:\t\t\t\t ./naviDev_ctrl.o /dev/naviDev.ctrl 2\n");
-        printf("\tReset HAT statistics:\t\t\t ./naviDev_ctrl.o /dev/naviDev.ctrl 3\n");
-        printf("\tEnable GNSS:\t\t\t\t ./naviDev_ctrl.o /dev/naviDev.ctrl 4 1\n");
-        printf("\tDisable GNSS:\t\t\t\t ./naviDev_ctrl.o /dev/naviDev.ctrl 4 0\n");
-        printf("\tConfigure HAT:\t\t\t\t ./naviDev_ctrl.o /dev/naviDev.ctrl 5 config.txt\n");
-        printf("\tEnable ID EEPROM write protection:\t ./naviDev_ctrl.o /dev/naviDev.ctrl 6 1\n");
-        printf("\tDisable ID EEPROM write protection:\t ./naviDev_ctrl.o /dev/naviDev.ctrl 6 0\n");
+        printf("Usage: ./moitessier_ctrl <DEVICE> <CMD_NR> <PARAM> <PARAM> ... <PARAM>\n");
+        printf("\tRead HAT statistics:\t\t\t ./moitessier_ctrl /dev/moitessier.ctrl 0\n");
+        printf("\tGet HAT info:\t\t\t\t ./moitessier_ctrl /dev/moitessier.ctrl 1\n");
+        printf("\tReset HAT:\t\t\t\t ./moitessier_ctrl /dev/moitessier.ctrl 2\n");
+        printf("\tReset HAT statistics:\t\t\t ./moitessier_ctrl /dev/moitessier.ctrl 3\n");
+        printf("\tEnable GNSS:\t\t\t\t ./moitessier_ctrl /dev/moitessier.ctrl 4 1\n");
+        printf("\tDisable GNSS:\t\t\t\t ./moitessier_ctrl /dev/moitessier.ctrl 4 0\n");
+        printf("\tConfigure HAT:\t\t\t\t ./moitessier_ctrl /dev/moitessier.ctrl 5 config.xml\n");
+        printf("\tEnable ID EEPROM write protection:\t ./moitessier_ctrl /dev/moitessier.ctrl 6 1\n");
+        printf("\tDisable ID EEPROM write protection:\t ./moitessier_ctrl /dev/moitessier.ctrl 6 0\n");
         return -1;
     }
     
-    fd_navidev = open(argv[1], O_RDONLY);
+    fd_moitessier = open(argv[1], O_RDONLY);
     cmd = atoi(argv[2]);
     for(i = 0; i < (argc - 3); i++)
         params[i] = atoi(argv[i + 3]);
     
-    if(fd_navidev)
+    if(fd_moitessier)
     {
         if(cmd < 0 || cmd >= IOCTL_CMDs)
         {
             printf("ERROR: command not supported\n");
-            close(fd_navidev);
+            close(fd_moitessier);
             return -1;            
         }
         
@@ -202,67 +205,43 @@ int main (int argc,char** argv)
                 configHAT.rcv[0].afcRangeDefault = 0;
                 configHAT.rcv[1].afcRangeDefault = 0;
 
-                while(fgets((char*)buf, sizeof(buf), fd_param) != NULL && i <= 14)
+                xml = ezxml_parse_file(fileName);
+                
+                for(i = 0; i < NUM_RCV; i++)
                 {
-                    for(k = 0; k < strlen((char*)buf); k++)
+                    for(k = 0; k < NUM_RCV_CHANNELS; k++)
                     {
-                        if(buf[k] == '\r' || buf[k] == '\n')
-                            buf[k] = '\0';
+                        configHAT.rcv[i].channelFreq[k] = (uint32_t)atoi(ezxml_get(xml, "receiver", i, "channelFreq", 0, "freq", k, "", -1)->txt);
+                        printf("%u\n", configHAT.rcv[i].channelFreq[k]);
                     }
-                    
-                    switch(i)
-                    {
-                        case 0:
-                            configHAT.rcv[0].channelFreq[0] = (uint32_t)atoi((char*)buf);
-                            break;
-                        case 1:
-                            configHAT.rcv[0].channelFreq[1] = (uint32_t)atoi((char*)buf);
-                            break;
-                        case 2:
-                            configHAT.rcv[0].metaDataMask = (uint8_t)atoi((char*)buf);
-                            break;
-                        case 3:
-                            configHAT.rcv[0].afcRange = (uint32_t)atoi((char*)buf);
-                            break;
-                        case 4: 
-                            configHAT.rcv[0].tcxoFreq = (uint32_t)atoi((char*)buf);
-                            break;
-                        case 5:
-                            configHAT.rcv[1].channelFreq[0] = (uint32_t)atoi((char*)buf);
-                            break;
-                        case 6:
-                            configHAT.rcv[1].channelFreq[1] = (uint32_t)atoi((char*)buf);
-                            break;
-                        case 7:
-                            configHAT.rcv[1].metaDataMask = (uint8_t)atoi((char*)buf);
-                            break;
-                        case 8:
-                            configHAT.rcv[1].afcRange = (uint32_t)atoi((char*)buf);
-                            break;
-                        case 9:
-                            configHAT.rcv[1].tcxoFreq = (uint32_t)atoi((char*)buf);
-                            break;
-                        case 10:
-                            configHAT.simulator.enabled = (uint8_t)atoi((char*)buf);
-                            break;
-                        case 11:
-                            configHAT.simulator.interval = (uint32_t)atoi((char*)buf);
-                            break;
-                        case 12:
-                            configHAT.simulator.mmsi[0] = (uint32_t)atoi((char*)buf);
-                            break;
-                        case 13:
-                            configHAT.simulator.mmsi[1] = (uint32_t)atoi((char*)buf);
-                            break;
-                        case 14:
-                            configHAT.wpEEPROM = (uint8_t)atoi((char*)buf);
-                            break;
-                        default:
-                            break;
-                    }
-                    i++;
-                } 
+                    configHAT.rcv[i].metaDataMask = (uint8_t)atoi(ezxml_get(xml, "receiver", i, "metamask", -1)->txt);
+                    printf("%u\n", configHAT.rcv[i].metaDataMask);
+                    configHAT.rcv[i].afcRange = (uint32_t)atoi(ezxml_get(xml, "receiver", i, "afcRange", -1)->txt);
+                    printf("%u\n", configHAT.rcv[i].afcRange);
+                    configHAT.rcv[i].tcxoFreq = (uint32_t)atoi(ezxml_get(xml, "receiver", i, "tcxoFreq", -1)->txt);    
+                    printf("%u\n", configHAT.rcv[i].tcxoFreq);
+                }
+                configHAT.simulator.enabled = (uint8_t)atoi(ezxml_get(xml, "simulator", 0, "enabled", -1)->txt);
+                //printf("%u\n", configHAT.simulator.enabled);
+                configHAT.simulator.interval = (uint32_t)atoi(ezxml_get(xml, "simulator", 0, "interval", -1)->txt);
+                //printf("%u\n", configHAT.simulator.interval);
+                configHAT.simulator.mmsi[0] = (uint32_t)atoi(ezxml_get(xml, "simulator", 0, "mmsi", 0, "id", 0, "", -1)->txt);
+                //printf("%u\n", configHAT.simulator.mmsi[0]);
+                configHAT.simulator.mmsi[1] = (uint32_t)atoi(ezxml_get(xml, "simulator", 0, "mmsi", 0, "id", 1, "", -1)->txt);
+                //printf("%u\n", configHAT.simulator.mmsi[1]);
+                configHAT.wpEEPROM = (uint8_t)atoi(ezxml_get(xml, "misc", 0, "eepromWpEnabled", -1)->txt);
+                //printf("%u\n", configHAT.wpEEPROM);
+                
+                //printf("%s\n", ezxml_get(xml, "misc", 0, "eepromWpEnabled", -1)->txt);
+                //printf("%s\n", ezxml_get(f1, "receiver", 1, "afcRange", -1)->txt);
+                //printf("%s\n", ezxml_get(f1, "team", 0, "driver", 1, "name", -1)->txt);
+
+                //printf("%s\n", ezxml_child(f1, "receiver")->attr[0]);
+                
+                
+                ezxml_free(xml);                
                 fclose(fd_param);
+                
                 memset(buf, 0, sizeof(buf));
                 memcpy(buf, &configHAT, sizeof(struct st_configHAT));
                 break;
@@ -274,7 +253,7 @@ int main (int argc,char** argv)
                 break;
         }
         
-        size = ioctl(fd_navidev, ioctlCmd, &buf);
+        size = ioctl(fd_moitessier, ioctlCmd, &buf);
         printf("size - %u\n", size);
                
         switch(cmd)
@@ -371,6 +350,6 @@ int main (int argc,char** argv)
         printf("error opening device %s\n", argv[1]);
         return -1;
     }
-    close(fd_navidev);
+    close(fd_moitessier);
     return 0;
 }       

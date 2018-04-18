@@ -1,4 +1,4 @@
-# compiler used
+# compiler to use
 CC := arm-linux-gnueabihf-gcc
 # list of subdirectories
 SUBDIRS := $(wildcard */.)

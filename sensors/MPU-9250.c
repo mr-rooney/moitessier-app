@@ -1,6 +1,8 @@
 /*
-    User space program to check communication with the MPU-9250 sensor.
-    This source code is for demonstation purpose only.
+    User space program to check communication with the MPU-9250 sensor
+    available on the Moitessier HAT.
+    This source code is for demonstation purpose only and was tested
+    on a Raspberry Pi 3 Model B.
     
     Copyright (C) 2018  Thomas POMS <hwsw.development@gmail.com>
     

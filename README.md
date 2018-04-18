@@ -1,15 +1,15 @@
 User Space Programs
 ===================
 
-These user space examples are part of the nav.HAT project (https://github.com/mr-rooney/nav.HAT/wiki) and should illustrate 
-how to communicate with the navigation HAT using a Raspberry Pi. 
+These user space examples are part of the Moitessier HAT project (https://github.com/mr-rooney/nav.HAT/wiki) and should illustrate 
+how to communicate with the HAT using a Raspberry Pi. 
 
 Compiling the user space examples: host> make
 
-Edit the top level makefile if a different compiler should be used.
+Edit the top level makefile if a different compiler should be used or call make CC=<SPECIFIC_COMPILER>.
 
 
-naviDev_ctrl
+moitessier_ctrl
 ------------
 Features:
 * reseting the HAT

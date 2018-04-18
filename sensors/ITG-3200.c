@@ -1,8 +1,9 @@
 /*
     User space program to check communication with the ITG-3200 sensor connected to
-    the IO expansion header. You need to use i2c-gpio-param (GPIO bitbanged I2C) to
-    communicate with the sensor.
-    This source code is for demonstation purpose only.
+    the IO expansion header of the Raspberry Pi 3 Model B. You need to use i2c-gpio-param 
+    (GPIO bitbanged I2C) to communicate with the sensor.
+    This source code is for demonstation purpose only and was tested
+    on a Raspberry Pi 3 Model B.
     
     Copyright (C) 2018  Thomas POMS <hwsw.development@gmail.com>
     

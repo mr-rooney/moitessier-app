@@ -1,8 +1,13 @@
 # This makefile will build separate targets for each C file located in the 
 # current directory.
+#
+# Usage:
+#   make                    if default compiler specified in this file should be used
+#   make CC=gcc             if different compiler should be used
 
-# compile to be used
-CC=arm-linux-gnueabihf-gcc
+
+# compiler to use
+CC := arm-linux-gnueabihf-gcc
 # compiler flags
 CFLAGS := -Wall -g
 # subdirectory to store executables

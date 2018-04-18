@@ -1,7 +1,9 @@
 /*
     User space program to read pressure and temperature from the 
-    Measurement Specialties MS5607-02BA03 sensor.
-    This source code is for demonstation purpose only.
+    Measurement Specialties MS5607-02BA03 sensor available on the
+    Moitessier HAT.
+    This source code is for demonstation purpose only and was tested
+    on a Raspberry Pi 3 Model B.
     
     Copyright (C) 2018  Thomas POMS <hwsw.development@gmail.com>
     

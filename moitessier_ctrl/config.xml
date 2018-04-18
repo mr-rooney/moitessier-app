@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<config>
+    <receiver name="receiver1">
+        <!-- channel frequency used by the receiver -->
+        <channelFreq>
+            <freq>161975000</freq>
+            <freq>162025000</freq>
+        </channelFreq>
+        <!-- metamask -->
+        <metamask>16</metamask>
+        <!-- automatic frequency control range [Hz] -->
+        <!-- default: 1500 -->
+        <!-- You might want to change this lightly for improving reception performance. Higher values allow higher frequency offsets, but might slow down the clock recovery -->
+        <afcRange>1500</afcRange>
+        <!-- TCXO frequency [Hz] used on the board -->
+        <!-- default: 13000000 -->
+        <!-- you might want to change this value (slightly) for center frequency calibration -->
+        <tcxoFreq>13000000</tcxoFreq>
+    </receiver>
+    <receiver name="receiver2">
+        <channelFreq>
+            <freq>161975000</freq>
+            <freq>162025000</freq>
+        </channelFreq>
+        <metamask>16</metamask>
+        <afcRange>2000</afcRange>
+        <tcxoFreq>13000000</tcxoFreq>
+    </receiver>
+    <simulator>
+        <!-- 1...enables the AIS simulator
+             0...disables the simulator -->
+        <enabled>1</enabled>
+        <!-- the interval [ms] used to generate simulated AIS position reports -->
+        <interval>1000</interval>
+        <!-- MMSI used for the AIS targets. Only two are supported. -->
+        <mmsi>
+            <id>5551122</id>
+            <id>688412</id>
+        </mmsi>
+    </simulator>
+    <misc>
+        <!-- 1...write protection of ID EEPROM enabled, writing not possible 
+             0...write protection disabled -->
+        <eepromWpEnabled>1</eepromWpEnabled>
+    </misc>
+</config>
