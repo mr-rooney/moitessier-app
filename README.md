@@ -1,16 +1,16 @@
-User Space Programs
-===================
+User Space Applications
+=======================
 
-These user space examples are part of the Moitessier HAT project (https://github.com/mr-rooney/nav.HAT/wiki) and should illustrate 
-how to communicate with the HAT using a Raspberry Pi. 
+These user space examples are part of the Moitessier HAT project (https://github.com/mr-rooney/moitessier/wiki) 
+and should illustrate how to communicate with the HAT using a Raspberry Pi. 
 
 Compiling the user space examples: host> make
 
-Edit the top level makefile if a different compiler should be used or call make CC=<SPECIFIC_COMPILER>.
+Edit the top level makefile, if a different compiler should be used or call make CC=<SPECIFIC_COMPILER>.
 
 
 moitessier_ctrl
-------------
+---------------
 Features:
 * reseting the HAT
 * reading/reseting statistics
