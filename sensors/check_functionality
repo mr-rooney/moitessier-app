@@ -3,6 +3,14 @@
 # the Moitessier HAT.
 # Depending on your hardware you might not have all of the sensors populated.
 
+echo "********** CPU **********"
+cpuTempPath=/sys/class/thermal/thermal_zone0/temp
+if [ -f "$cpuTempPath" ]; then
+    cpuTemp=$(cat /sys/class/thermal/thermal_zone0/temp)
+    echo 3 k $cpuTemp 1000 / p | dc
+else
+    echo "Cannot get CPU temperature"    
+fi
 echo "********** MS5607-02BA03 **********"
 ./MS5607-02BA03 &
 sleep 3
