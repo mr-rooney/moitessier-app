@@ -30,8 +30,14 @@
     Usage
     =====
     
+    Running in endless loop:
     ./Si7020-A20
     
+    Running with specified iterations:
+    ./Si7020-A20 <ITERATIONS> <HUMAN_READABLE>
+    
+    Read firmware revision:
+    ./Si7020-A20 0 <HUMAN_READABLE>
 */
 
 #include <stdio.h>
@@ -42,6 +48,7 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #define I2C_ADDR                    0x40                /* slave address of the sensor */
 #define I2C_BUS                     "/dev/i2c-1"        /* I2C bus where the sensor is connected to */
@@ -98,7 +105,8 @@ int measHum(int fd, uint8_t *buf, uint32_t bufSize)
     return 0;
 }
  
-int main (void) {
+int main (int argc,char** argv)
+{
 	uint8_t buffer[4];
 	int fd;
     double temp;
@@ -106,33 +114,57 @@ int main (void) {
     double hum;
     uint32_t tempRead;
     uint32_t humRead;
-
+    int iterations = 0;
+    int cycles = 0;
+    int humanReadable = 1;
+    
+    if(argc >= 2)
+    {
+        iterations = atoi(argv[1]);    
+    }
+                
+    if(argc == 3)
+    {
+        humanReadable = atoi(argv[2]);
+    }
+    
 	fd = open(I2C_BUS, O_RDWR);
 
 	if(fd < 0)
 	{
-		printf("opening file failed: %s\n", strerror(errno));
+	    if(humanReadable)
+		    printf("opening file failed: %s\n", strerror(errno));
 		return 1;
 	}
 
 	if(ioctl(fd, I2C_SLAVE, I2C_ADDR) < 0)
 	{
-		printf("ioctl error: %s\n", strerror(errno));
+	    if(humanReadable)
+		    printf("ioctl error: %s\n", strerror(errno));
 		return 1;
 	}
-
-    /* read firmware revision */
+	
+	/* read firmware revision */
 	buffer[0]=(uint8_t)(CMD_READ_FW_REV >> 8);
     buffer[1]=(uint8_t)CMD_READ_FW_REV;
 	write(fd, buffer, 2);
 	read(fd, buffer, 1);
-	printf("Firmware revision: 0x%02X\n", buffer[0]);
-
-    while(1)
+	
+	if(argc < 2 || iterations == 0)
     {
+        if(humanReadable)
+            printf("Firmware revision: 0x%02X\n", buffer[0]);
+        else
+            printf("%02X\n", buffer[0]);
+    }
+    
+    while(argc < 2 || (argc >= 2 && cycles < iterations))
+    {
+        cycles++;
         if(measTemp(fd, buffer, sizeof(buffer)) != 0)
         {
-            printf("Temperature measurement failed.\n");
+            if(humanReadable)
+                printf("Temperature measurement failed.\n");
             return 1;
         }
         tempRead = buffer[0] << 8;
@@ -141,7 +173,8 @@ int main (void) {
 
         if(measHum(fd, buffer, sizeof(buffer)) != 0)
         {
-            printf("Humidity measurement failed.\n");
+            if(humanReadable)
+                printf("Humidity measurement failed.\n");
             return 1;
         }
         humRead = buffer[0] << 8;
@@ -151,7 +184,10 @@ int main (void) {
         tempRead |= buffer[3];
         tempHum = 175.72 * (double)tempRead / 65536 - 46.85;
 
-        printf("%.2f °C, %.2f %%RH (%.2f °C)\n", temp, hum, tempHum);
+        if(humanReadable)
+            printf("%.2f °C, %.2f %%RH (%.2f °C)\n", temp, hum, tempHum);
+        else
+            printf("%.2f,%.2f,%.2f\n", temp, hum, tempHum);
         sleep(1);
     }
     

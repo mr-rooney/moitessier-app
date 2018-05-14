@@ -31,8 +31,11 @@
     Usage
     =====
     
+    Running in endless loop:
     ./MS5607-02BA03
     
+    Running with specified iterations:
+    ./MS5607-02BA03 <ITERATIONS> <HUMAN_READABLE>
 */
 
 #include <stdio.h>
@@ -44,6 +47,7 @@
 #include <sys/ioctl.h>
 #include <stdint.h>
 #include <math.h>
+#include <stdlib.h>
 
 #define I2C_ADDR                    0x77                /* slave address of the sensor */
 #define I2C_BUS                     "/dev/i2c-1"        /* I2C bus where the sensor is connected to */
@@ -186,49 +190,71 @@ int readPROM(int fd, uint16_t *prom, uint8_t promSize)
     return 0;
 }
 
-int main (void)
+int main (int argc,char** argv)
 {
 	int fd;
     uint16_t prom[8];
     int rc;
     double pressure;
     double temp;
-
+    int iterations = 0;
+    int cycles = 0;
+    int humanReadable = 1;
+    
+    if(argc >= 2)
+    {
+        iterations = atoi(argv[1]);    
+    }
+                
+    if(argc == 3)
+    {
+        humanReadable = atoi(argv[2]);
+    }
+        
 	fd = open(I2C_BUS, O_RDWR);
 
 	if(fd < 0)
 	{
-		printf("opening file failed: %s\n", strerror(errno));
+		if(humanReadable)
+		    printf("opening file failed: %s\n", strerror(errno));
 		return 1;
 	}
 
 	if(ioctl(fd, I2C_SLAVE, I2C_ADDR) < 0)
 	{
-		printf("ioctl error: %s\n", strerror(errno));
+		if(humanReadable)
+		    printf("ioctl error: %s\n", strerror(errno));
 		return 1;
 	}
 	
 	rc = readPROM(fd, prom, sizeof(prom) / sizeof(uint16_t));
 	if(rc == -1)
 	{
-	    printf("Reading PROM failed.\n");
+	    if(humanReadable)
+		    printf("Reading PROM failed.\n");
         return 1;
 	}
 	else if(rc == -2)
 	{
-	    printf("PROM CRC invalid.\n");
+	    if(humanReadable)
+		    printf("PROM CRC invalid.\n");
         return 1;
 	}
 	
-	while(1)
+	while(argc < 2 || (argc >= 2 && cycles < iterations))
     {
+        cycles++;
         if(readPressure(fd, prom, &pressure, &temp) != 0)
         {
-            printf("Measuring pressure failed.\n");
+            if(humanReadable)
+		        printf("Measuring pressure failed.\n");
             return 1;
         }
         
-        printf("%.2f mbar, %0.2f °C\n", pressure, temp);
+        if(humanReadable)
+		    printf("%.2f mbar, %0.2f °C\n", pressure, temp);
+		else
+		    printf("%.2f,%0.2f\n", pressure, temp);
         sleep(1);
     }
 

@@ -1,0 +1,107 @@
+#!/bin/bash
+# This script is used to logg data of the sensors of the Moitessier HAT to a file.
+# Depending on your hardware you might not have all of the sensors populated.
+# 
+# You might want to use this script as cron job.
+# Edit:
+# pi> crontab -e
+
+help()
+{
+    echo
+    echo "******************************************************************************************"
+    echo "This script is used to logg the sensor data of the Moitessier HAT."
+    echo       
+    echo "One of the following options can be applied:"
+    echo "    -f : Defines the file where the sensor data should be written to"
+    echo "         This option requires the path + filename as parameter"
+    echo "    -a : Data will be appended to the logg file if this option is set, otherwise content"
+    echo "         is overwritten if this script is called."
+    echo
+    echo "******************************************************************************************"
+    echo
+}
+
+error()
+{
+    echo
+    echo "******************************************************************************************"
+    echo "ERROR occured!!"
+    echo
+    echo $1
+    echo "******************************************************************************************"
+    echo
+}
+
+setHeader()
+{
+    if [ ! -s $1 ]
+    then
+        echo "date,time,cpu temperature,pressure,temperature pressure sensor,temperature mpu sensor,temperature,humidity,temperature humidity sensor" > $1
+    fi
+}
+
+path="$( cd "$(dirname "$0")" ; pwd -P )"
+
+fOption=0
+aOption=0
+loggFile=""
+
+while getopts 'f:ha' option
+do
+    case $option in
+        f) fOption=1
+           loggFile="$OPTARG"
+            ;;
+        a) aOption=1
+            ;;
+        h) exit 0
+            ;;
+        \?) echo
+            error "Invalid option."
+            exit 1
+            ;;
+    esac
+done
+
+if [ $fOption == "0" ]
+then
+    error "Option -f must be applied."
+    help
+    exit 1
+fi
+
+timestamp=$(date '+%Y-%m-%d,%H:%M:%S')
+
+cpuTempPath=/sys/class/thermal/thermal_zone0/temp
+if [ -f "$cpuTempPath" ]; then
+    cpuTemp=$(cat /sys/class/thermal/thermal_zone0/temp)
+    cpuTemp=$(echo 3 k $cpuTemp 1000 / p | dc)
+fi
+
+ms5607=$(${path}/MS5607-02BA03 1 0)
+mpu9250=$(${path}/MPU-9250 1 0)
+si7020=$(${path}/Si7020-A20 1 0)
+
+# create a CSV compatible data set
+data=${timestamp},${cpuTemp},${ms5607},${mpu9250},${si7020}
+
+# check if logg file exits
+if [ ! -f ${loggFile} ]
+then
+    touch ${loggFile}
+    
+    # set headers used for CSV processing
+    setHeader ${loggFile}
+fi
+
+# we are writing the file in none appending mode
+if [ ${aOption} -eq 0 ]
+then
+    truncate -s 0 ${loggFile}
+    setHeader ${loggFile}
+fi   
+
+echo $data >> ${loggFile}
+
+exit 0
