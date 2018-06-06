@@ -32,10 +32,10 @@
     =====
     
     Running in endless loop:
-    ./MS5607-02BA03
+    ./MS5607-02BA03 /dev/i2c-1
     
     Running with specified iterations:
-    ./MS5607-02BA03 <ITERATIONS> <HUMAN_READABLE>
+    ./MS5607-02BA03 /dev/i2c-1 <ITERATIONS> <HUMAN_READABLE>
 */
 
 #include <stdio.h>
@@ -50,7 +50,8 @@
 #include <stdlib.h>
 
 #define I2C_ADDR                    0x77                /* slave address of the sensor */
-#define I2C_BUS                     "/dev/i2c-1"        /* I2C bus where the sensor is connected to */
+//#define I2C_BUS                     "/dev/i2c-1"        /* I2C bus where the sensor is connected to */
+char** I2C_BUS;
 
 /* sensor commands */
 /* YOU MUST NOT USE CLOCK STRETCHING COMMANDS ON THE RASPBERRY PI */
@@ -197,18 +198,29 @@ int main (int argc,char** argv)
     int rc;
     double pressure;
     double temp;
-    int iterations = 0;
+    int iterations = 1;
     int cycles = 0;
     int humanReadable = 1;
-    
-    if(argc >= 2)
+     
+    if(argc < 2)
     {
-        iterations = atoi(argv[1]);    
+        printf("Missing parameter.\n");
+        printf("Usage: %s <I2C_BUS> <ITERATIONS> <HUMAN_READABLE>\n", argv[0]);
+        printf("       <ITERATIONS> is optional, must be greater than 0. Default = 1\n");
+        printf("       <HUMAN_READABLE> is optional, 1...human readable output, else 0. Default = 1\n");
+        return 1;
+    }
+    
+    I2C_BUS = argv[1];
+    
+    if(argc >= 3)
+    {
+        iterations = atoi(argv[2]);    
     }
                 
-    if(argc == 3)
+    if(argc == 4)
     {
-        humanReadable = atoi(argv[2]);
+        humanReadable = atoi(argv[3]);
     }
         
 	fd = open(I2C_BUS, O_RDWR);

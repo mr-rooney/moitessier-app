@@ -3,27 +3,111 @@
 # the Moitessier HAT.
 # Depending on your hardware you might not have all of the sensors populated.
 
+# The I2C bus that should be used by default. This might be overwritten with option -i.
+bus=/dev/i2c-1  
+
+# Measurement cycles used by default.
+iterations=1
+
+help()
+{
+    echo
+    echo "******************************************************************************************"
+    echo "This script is used to check/read the sensors of the Moitessier HAT."
+    echo       
+    echo "One of the following options can be applied:"
+    echo "    -i : I2C interface used to communicate with the sensors. If not set ${bus} is used"
+    echo "    -c : Defines the number of measurement cycles/iterations. If not set ${iterations} cycle will be executed."
+    echo "******************************************************************************************"
+    echo
+}
+
+killProc()
+{
+    pid=$(pidof $1)
+    if [ $? -eq 0 ]
+    then
+        kill -9 $pid
+        wait $pid 2>/dev/null
+    fi
+}
+
+# trap ctrl-c and call ctrl_c()
+trap ctrl_c INT
+
+function ctrl_c() {
+        echo "Execution aborted"
+        killProc "MS5607-02BA03"
+        killProc "MPU-9250"
+        killProc "Si7020-A20"
+        exit 1
+}
+
+cOption=0
+iOption=0
+
+help
+
+while getopts 'i:c:h' option
+do
+    case $option in
+        i) iOption=1
+           bus="$OPTARG"
+            ;;
+        c) cOption=1
+           iterations="$OPTARG"
+            ;;
+        h) exit 0
+            ;;
+        \?) echo
+            error "Invalid option."
+            exit 1
+            ;;
+    esac
+done
+
+# calling path
+pwd="`dirname \"$0\"`"
+
 echo "********** CPU **********"
 cpuTempPath=/sys/class/thermal/thermal_zone0/temp
 if [ -f "$cpuTempPath" ]; then
-    cpuTemp=$(cat /sys/class/thermal/thermal_zone0/temp)
-    echo 3 k $cpuTemp 1000 / p | dc
+    for ((i=0; i < ${iterations}; i++))
+    do  
+        cpuTemp=$(cat /sys/class/thermal/thermal_zone0/temp)
+        cpuTemp=$(echo 3 k $cpuTemp 1000 / p | dc)
+        printf "${cpuTemp}\n"
+        sleep 0.2
+    done
 else
     echo "Cannot get CPU temperature"    
 fi
 echo "********** MS5607-02BA03 **********"
-./MS5607-02BA03 &
-sleep 3
-pid=$(pidof MS5607-02BA03)
-kill -9 $pid
+"${pwd}/MS5607-02BA03" ${bus} ${iterations}
+if [ $? -ne 0 ]
+then
+    echo "reading sensor failed"
+    exit 1
+fi
+#sleep 3
+killProc "MS5607-02BA03"
 echo "********** MPU-9250 **********"
-./MPU-9250 &
-sleep 3
-pid=$(pidof MPU-9250)
-kill -9 $pid
+"${pwd}/MPU-9250" ${bus} ${iterations}
+if [ $? -ne 0 ]
+then
+    echo "reading sensor failed"
+    exit 1
+fi
+#sleep 3
+killProc "MPU-9250"
 echo "********** Si7020-A20 **********"
-./Si7020-A20 &
-sleep 3
-pid=$(pidof Si7020-A20)
-kill -9 $pid
+"${pwd}/Si7020-A20" ${bus} ${iterations}
+if [ $? -ne 0 ]
+then
+    echo "reading sensor failed"
+    exit 1
+fi
+#sleep 3
+killProc "Si7020-A20"
 
+exit 0

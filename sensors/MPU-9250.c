@@ -31,13 +31,13 @@
     =====
     
     Running in endless loop:
-    ./MPU-9250
+    ./MPU-9250 /dev/i2c-1
     
     Running with specified iterations:
-    ./MPU-9250 <ITERATIONS> <HUMAN_READABLE>
+    ./MPU-9250 /dev/i2c-1 <ITERATIONS> <HUMAN_READABLE>
     
     Read device ID:
-    ./MPU-9250 0 <HUMAN_READABLE> 
+    ./MPU-9250 /dev/i2c-1 0 <HUMAN_READABLE> 
 */
 
 #include <stdio.h>
@@ -51,7 +51,8 @@
 #include <stdlib.h>
 
 #define I2C_ADDR                    0x68                /* slave address of the sensor */
-#define I2C_BUS                     "/dev/i2c-1"        /* I2C bus where the sensor is connected to */
+//#define I2C_BUS                     "/dev/i2c-1"        /* I2C bus where the sensor is connected to */
+char** I2C_BUS;
 #define REG_WHO_AM_I                117
 #define REG_TEMPERATURE             65
  
@@ -60,18 +61,29 @@ int main (int argc,char** argv)
 	uint8_t buffer[4];
 	int fd;
     double temp;
-    int iterations = 0;
+    int iterations = 1;
     int cycles = 0;
     int humanReadable = 1;
     
-	if(argc >= 2)
+	if(argc < 2)
     {
-        iterations = atoi(argv[1]);    
+        printf("Missing parameter.\n");
+        printf("Usage: %s <I2C_BUS> <ITERATIONS> <HUMAN_READABLE>\n", argv[0]);
+        printf("       <ITERATIONS> is optional, 0...read firmware, > 1 iterations. Default = 1\n");
+        printf("       <HUMAN_READABLE> is optional, 1...human readable output, else 0. Default = 1\n");
+        return 1;
+    }
+    
+    I2C_BUS = argv[1];
+    
+    if(argc >= 3)
+    {
+        iterations = atoi(argv[2]);    
     }
                 
-    if(argc == 3)
+    if(argc == 4)
     {
-        humanReadable = atoi(argv[2]);
+        humanReadable = atoi(argv[3]);
     }
 
     fd = open(I2C_BUS, O_RDWR);
@@ -92,8 +104,16 @@ int main (int argc,char** argv)
 	
 	/* read firmware revision */
 	buffer[0]=REG_WHO_AM_I;
-    write(fd, buffer, 1);
-	read(fd, buffer, 1);
+    if(write(fd, buffer, 1) < 0)
+    {
+        printf("Communication with sensor failed.\n");
+        return 1;
+    }
+	if(read(fd, buffer, 1)  < 0)
+	{
+        printf("Communication with sensor failed.\n");
+        return 1;
+    }
 	
 	if(argc < 2 || iterations == 0)
     {
@@ -107,8 +127,16 @@ int main (int argc,char** argv)
     {
         cycles++;
         buffer[0]=REG_TEMPERATURE;
-        write(fd, buffer, 1);
-	    read(fd, buffer, 2);
+        if(write(fd, buffer, 1) < 0)
+        {
+            printf("Communication with sensor failed.\n");
+            return 1;
+        }
+	    if(read(fd, buffer, 2) < 0)
+	    {
+            printf("Communication with sensor failed.\n");
+            return 1;
+        }
         temp = (double)(((uint16_t)buffer[0] << 8) | buffer[1]) / 333.87 + 21;
         if(humanReadable)
             printf("%.2f °C\n", temp);

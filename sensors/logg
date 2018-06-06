@@ -6,6 +6,9 @@
 # Edit:
 # pi> crontab -e
 
+# The I2C bus that should be used per default. This might be overwritten with option -i.
+bus=/dev/i2c-1    
+
 help()
 {
     echo
@@ -17,6 +20,7 @@ help()
     echo "         This option requires the path + filename as parameter"
     echo "    -a : Data will be appended to the logg file if this option is set, otherwise content"
     echo "         is overwritten if this script is called."
+    echo "    -i : The I2C bus that should be used, ${bus} is used if option not set"
     echo
     echo "******************************************************************************************"
     echo
@@ -47,15 +51,19 @@ fOption=0
 aOption=0
 loggFile=""
 
-while getopts 'f:ha' option
+while getopts 'i:f:ha' option
 do
     case $option in
+        i) iOption=1
+           bus="$OPTARG"
+            ;;
         f) fOption=1
            loggFile="$OPTARG"
             ;;
         a) aOption=1
             ;;
-        h) exit 0
+        h) help
+            exit 0
             ;;
         \?) echo
             error "Invalid option."
@@ -79,9 +87,9 @@ if [ -f "$cpuTempPath" ]; then
     cpuTemp=$(echo 3 k $cpuTemp 1000 / p | dc)
 fi
 
-ms5607=$(${path}/MS5607-02BA03 1 0)
-mpu9250=$(${path}/MPU-9250 1 0)
-si7020=$(${path}/Si7020-A20 1 0)
+ms5607=$(${path}/MS5607-02BA03 ${bus} 1 0)
+mpu9250=$(${path}/MPU-9250 ${bus} 1 0)
+si7020=$(${path}/Si7020-A20 ${bus} 1 0)
 
 # create a CSV compatible data set
 data=${timestamp},${cpuTemp},${ms5607},${mpu9250},${si7020}

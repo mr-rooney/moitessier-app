@@ -31,13 +31,13 @@
     =====
     
     Running in endless loop:
-    ./Si7020-A20
+    ./Si7020-A20 /dev/i2c-1
     
     Running with specified iterations:
-    ./Si7020-A20 <ITERATIONS> <HUMAN_READABLE>
+    ./Si7020-A20 /dev/i2c-1 <ITERATIONS> <HUMAN_READABLE>
     
     Read firmware revision:
-    ./Si7020-A20 0 <HUMAN_READABLE>
+    ./Si7020-A20 /dev/i2c-1 0 <HUMAN_READABLE>
 */
 
 #include <stdio.h>
@@ -51,7 +51,8 @@
 #include <stdlib.h>
 
 #define I2C_ADDR                    0x40                /* slave address of the sensor */
-#define I2C_BUS                     "/dev/i2c-1"        /* I2C bus where the sensor is connected to */
+//#define I2C_BUS                     "/dev/i2c-1"        /* I2C bus where the sensor is connected to */
+char** I2C_BUS;
 
 /* sensor commands */
 /* YOU MUST NOT USE CLOCK STRETCHING COMMANDS ON THE RASPBERRY PI */
@@ -67,15 +68,21 @@
 int measTemp(int fd, uint8_t *buf, uint32_t bufSize)
 {
     uint8_t cmd = CMD_MEAS_TEMP;
+    int32_t rc;
     
     if(bufSize < 2)
         return -1;
         
-    write(fd, &cmd, 1);
+    if(write(fd, &cmd, 1) < 0)
+        return -1;
+    
     do
     {
        //usleep(100); 
-    }while(read(fd, buf, 2) != 2);
+        rc = read(fd, buf, 2);
+        if(rc < 0)
+            return -1;
+    }while(rc != 2);
 
     return 0;
 }
@@ -84,23 +91,34 @@ int measTemp(int fd, uint8_t *buf, uint32_t bufSize)
 int measHum(int fd, uint8_t *buf, uint32_t bufSize)
 {
     uint8_t cmd;
+    int32_t rc;
     
     if(bufSize < 4)
         return -1;
     
     cmd = CMD_MEAS_RH;
-    write(fd, &cmd, 1);
+    if(write(fd, &cmd, 1) < 0)
+        return -1;
+    
     do
     {
-       //usleep(100); 
-    }while(read(fd, buf, 2) != 2);
+       //usleep(100); rc = (read(fd, buf, 2);
+        rc = read(fd, buf, 2);
+        if(rc < 0)
+            return -1;
+    }while(rc != 2);
 
     cmd = CMD_READ_TEMP_FROM_RH_MEAS;
-    write(fd, &cmd, 1);
+    if(write(fd, &cmd, 1) < 0)
+        return 1;
+    
     do
     {
        //usleep(100); 
-    }while(read(fd, buf + 2, 2) != 2);
+        rc = read(fd, buf + 2, 2);
+        if(rc < 0)
+            return -1;
+    }while(rc != 2);
 
     return 0;
 }
@@ -117,15 +135,27 @@ int main (int argc,char** argv)
     int iterations = 0;
     int cycles = 0;
     int humanReadable = 1;
+    int32_t rc;
     
-    if(argc >= 2)
+    if(argc < 2)
     {
-        iterations = atoi(argv[1]);    
+        printf("Missing parameter.\n");
+        printf("Usage: %s <I2C_BUS> <ITERATIONS> <HUMAN_READABLE>\n", argv[0]);
+        printf("       <ITERATIONS> is optional, 0...read firmware, > 1 iterations. Default = 1\n");
+        printf("       <HUMAN_READABLE> is optional, 1...human readable output, else 0. Default = 1\n");
+        return 1;
+    }
+    
+    I2C_BUS = argv[1];
+    
+    if(argc >= 3)
+    {
+        iterations = atoi(argv[2]);    
     }
                 
-    if(argc == 3)
+    if(argc == 4)
     {
-        humanReadable = atoi(argv[2]);
+        humanReadable = atoi(argv[3]);
     }
     
 	fd = open(I2C_BUS, O_RDWR);
@@ -147,9 +177,17 @@ int main (int argc,char** argv)
 	/* read firmware revision */
 	buffer[0]=(uint8_t)(CMD_READ_FW_REV >> 8);
     buffer[1]=(uint8_t)CMD_READ_FW_REV;
-	write(fd, buffer, 2);
-	read(fd, buffer, 1);
-	
+    if(write(fd, buffer, 2) < 0)
+    {
+        printf("Communication with sensor failed.\n");
+        return 1;
+    }
+	if(read(fd, buffer, 1) < 0)
+	{
+        printf("Communication with sensor failed.\n");
+        return 1;
+    }
+    
 	if(argc < 2 || iterations == 0)
     {
         if(humanReadable)
@@ -161,12 +199,15 @@ int main (int argc,char** argv)
     while(argc < 2 || (argc >= 2 && cycles < iterations))
     {
         cycles++;
+        printf("4\n");
         if(measTemp(fd, buffer, sizeof(buffer)) != 0)
         {
             if(humanReadable)
                 printf("Temperature measurement failed.\n");
             return 1;
         }
+        printf("5\n");
+	
         tempRead = buffer[0] << 8;
         tempRead |= buffer[1];
         temp = 175.72 * (double)tempRead / 65536 - 46.85;

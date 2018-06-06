@@ -73,15 +73,32 @@ int main (void) {
 
     /* read firmware revision */
 	buffer[0]=REG_WHO_AM_I;
-    write(fd, buffer, 1);
-	read(fd, buffer, 1);
+    if(write(fd, buffer, 1) < 0)
+    {
+        printf("Communication with sensor failed.\n");
+        return 1;
+    }
+	if(read(fd, buffer, 1) < 0)
+	{
+        printf("Communication with sensor failed.\n");
+        return 1;
+    }
+    
 	printf("Device ID: 0x%02X - %s\n", buffer[0], (buffer[0] == (I2C_ADDR + 1)) ? "ITG-3200 found" : "ITG-3200 not found");
     
     while(1)
     {
         buffer[0]=REG_TEMPERATURE;
-        write(fd, buffer, 1);
-	    read(fd, buffer, 2);
+        if(write(fd, buffer, 1) < 0)
+        {
+            printf("Communication with sensor failed.\n");
+            return 1;
+        }
+	    if(read(fd, buffer, 2) < 0)
+	    {
+            printf("Communication with sensor failed.\n");
+            return 1;
+        }
         raw = (buffer[0] << 8) | (buffer[1]);
         temp = (double)raw / 280 + 82.142857;
         printf("%.2f °C\n", temp);
