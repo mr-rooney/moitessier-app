@@ -52,7 +52,7 @@
 
 #define I2C_ADDR                    0x68                /* slave address of the sensor */
 //#define I2C_BUS                     "/dev/i2c-1"        /* I2C bus where the sensor is connected to */
-char** I2C_BUS;
+char* I2C_BUS;
 #define REG_WHO_AM_I                117
 #define REG_TEMPERATURE             65
  

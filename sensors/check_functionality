@@ -86,7 +86,8 @@ echo "********** MS5607-02BA03 **********"
 "${pwd}/MS5607-02BA03" ${bus} ${iterations}
 if [ $? -ne 0 ]
 then
-    echo "reading sensor failed"
+    echo "Reading sensor failed."
+    echo "This might be okay, if this sensors is not assembled on the board."
     exit 1
 fi
 #sleep 3
@@ -95,7 +96,8 @@ echo "********** MPU-9250 **********"
 "${pwd}/MPU-9250" ${bus} ${iterations}
 if [ $? -ne 0 ]
 then
-    echo "reading sensor failed"
+    echo "Reading sensor failed."
+    echo "This might be okay, if this sensors is not assembled on the board."
     exit 1
 fi
 #sleep 3
@@ -104,7 +106,8 @@ echo "********** Si7020-A20 **********"
 "${pwd}/Si7020-A20" ${bus} ${iterations}
 if [ $? -ne 0 ]
 then
-    echo "reading sensor failed"
+    echo "Reading sensor failed."
+    echo "This might be okay, if this sensors is not assembled on the board."
     exit 1
 fi
 #sleep 3

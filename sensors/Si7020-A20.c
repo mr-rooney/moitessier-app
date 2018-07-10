@@ -52,7 +52,7 @@
 
 #define I2C_ADDR                    0x40                /* slave address of the sensor */
 //#define I2C_BUS                     "/dev/i2c-1"        /* I2C bus where the sensor is connected to */
-char** I2C_BUS;
+char* I2C_BUS;
 
 /* sensor commands */
 /* YOU MUST NOT USE CLOCK STRETCHING COMMANDS ON THE RASPBERRY PI */
@@ -135,7 +135,6 @@ int main (int argc,char** argv)
     int iterations = 0;
     int cycles = 0;
     int humanReadable = 1;
-    int32_t rc;
     
     if(argc < 2)
     {

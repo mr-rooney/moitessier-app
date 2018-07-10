@@ -48,10 +48,11 @@
 #include <stdint.h>
 #include <math.h>
 #include <stdlib.h>
+#include <inttypes.h>
 
 #define I2C_ADDR                    0x77                /* slave address of the sensor */
 //#define I2C_BUS                     "/dev/i2c-1"        /* I2C bus where the sensor is connected to */
-char** I2C_BUS;
+char* I2C_BUS;
 
 /* sensor commands */
 /* YOU MUST NOT USE CLOCK STRETCHING COMMANDS ON THE RASPBERRY PI */
@@ -61,7 +62,7 @@ char** I2C_BUS;
 #define CMD_READ_PROM               0xA0
 
 /* measure temperature */
-int readPressure(int fd, uint16_t *prom, double *pressure, double *temp)
+int readPressure(int fd, uint16_t *prom, double *pressure, double *temp, uint32_t *d_D1, uint32_t *d_D2, int32_t *d_dT, int64_t *d_OFF, int64_t *d_SENS)
 {
     uint8_t cmd;
     uint32_t D1 = 0, D2 = 0;
@@ -120,6 +121,12 @@ int readPressure(int fd, uint16_t *prom, double *pressure, double *temp)
     SENS = prom[1] * pow(2,16) + dT * (double)prom[3] / pow(2,7);
     P = ((D1 * SENS / pow(2,21) - OFF) / pow(2,15)) / 100;
     *pressure = P;
+    
+    *d_dT = dT;
+    *d_D1 = D1;
+    *d_D2 = D2;
+    *d_OFF = OFF;
+    *d_SENS = SENS;
        
     return 0;
 }
@@ -201,6 +208,12 @@ int main (int argc,char** argv)
     int iterations = 1;
     int cycles = 0;
     int humanReadable = 1;
+    int debugEnabled = 0;
+    uint32_t d_D1;
+    uint32_t d_D2;
+    int64_t d_SENS;
+    int64_t d_OFF;
+    int32_t d_dT;
      
     if(argc < 2)
     {
@@ -208,6 +221,7 @@ int main (int argc,char** argv)
         printf("Usage: %s <I2C_BUS> <ITERATIONS> <HUMAN_READABLE>\n", argv[0]);
         printf("       <ITERATIONS> is optional, must be greater than 0. Default = 1\n");
         printf("       <HUMAN_READABLE> is optional, 1...human readable output, else 0. Default = 1\n");
+        printf("       <DEBUG_ENABLE> is optional, 1...debugging enabled, else 0. Default = 0\n");
         return 1;
     }
     
@@ -218,9 +232,14 @@ int main (int argc,char** argv)
         iterations = atoi(argv[2]);    
     }
                 
-    if(argc == 4)
+    if(argc >= 4)
     {
         humanReadable = atoi(argv[3]);
+    }
+    
+    if(argc == 5)
+    {
+        debugEnabled = atoi(argv[4]);
     }
         
 	fd = open(I2C_BUS, O_RDWR);
@@ -256,7 +275,8 @@ int main (int argc,char** argv)
 	while(argc < 2 || (argc >= 2 && cycles < iterations))
     {
         cycles++;
-        if(readPressure(fd, prom, &pressure, &temp) != 0)
+        
+        if(readPressure(fd, prom, &pressure, &temp, &d_D1, &d_D2, &d_dT, &d_OFF, &d_SENS) != 0)
         {
             if(humanReadable)
 		        printf("Measuring pressure failed.\n");
@@ -264,7 +284,12 @@ int main (int argc,char** argv)
         }
         
         if(humanReadable)
-		    printf("%.2f mbar, %0.2f °C\n", pressure, temp);
+        {
+            if(debugEnabled)
+		        printf("%.2f mbar, %0.2f °C, %.2f,%0.2f,%u,%u,%d,%" PRId64 ",%" PRId64 ",%u,%u,%u,%u,%u,%u,%u,%u\n", pressure, temp, pressure, temp, d_D1, d_D2, d_dT, d_OFF, d_SENS, prom[0], prom[1], prom[2], prom[3], prom[4], prom[5], prom[6], prom[7]);
+		    else
+		        printf("%.2f mbar, %0.2f °C\n", pressure, temp);
+		}
 		else
 		    printf("%.2f,%0.2f\n", pressure, temp);
         sleep(1);
