@@ -49,6 +49,7 @@
 #include <sys/ioctl.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <time.h>
 
 #define I2C_ADDR                    0x40                /* slave address of the sensor */
 //#define I2C_BUS                     "/dev/i2c-1"        /* I2C bus where the sensor is connected to */
@@ -64,26 +65,39 @@ char* I2C_BUS;
 #define CMD_READ_ID_1               0xFA0F
 #define CMD_READ_ID_2               0xFCC9
 
+#define READ_TIMEOUT_SEC            2
+
 /* measure temperature */
 int measTemp(int fd, uint8_t *buf, uint32_t bufSize)
 {
     uint8_t cmd = CMD_MEAS_TEMP;
     int32_t rc;
+    time_t timeA;
+    time_t timeB;
     
     if(bufSize < 2)
         return -1;
-        
+    
     if(write(fd, &cmd, 1) < 0)
         return -1;
     
+    timeA = time(NULL);
+    if(timeA == -1)
+        return -1;    
     do
     {
        //usleep(100); 
         rc = read(fd, buf, 2);
+        timeB = time(NULL);
+        if(timeB == -1)
+            return -1;      
         if(rc < 0)
-            return -1;
+        {
+            if((timeB - timeA) > READ_TIMEOUT_SEC)            
+                return -1;
+        }
     }while(rc != 2);
-
+    
     return 0;
 }
 
@@ -92,6 +106,8 @@ int measHum(int fd, uint8_t *buf, uint32_t bufSize)
 {
     uint8_t cmd;
     int32_t rc;
+    time_t timeA;
+    time_t timeB;
     
     if(bufSize < 4)
         return -1;
@@ -100,24 +116,44 @@ int measHum(int fd, uint8_t *buf, uint32_t bufSize)
     if(write(fd, &cmd, 1) < 0)
         return -1;
     
+    timeA = time(NULL);
+    if(timeA == -1)
+        return -1;    
+        
     do
     {
        //usleep(100); rc = (read(fd, buf, 2);
         rc = read(fd, buf, 2);
+        timeB = time(NULL);
+        if(timeB == -1)
+            return -1;      
         if(rc < 0)
-            return -1;
+        {
+            if((timeB - timeA) > READ_TIMEOUT_SEC)            
+                return -1;
+        }
     }while(rc != 2);
 
     cmd = CMD_READ_TEMP_FROM_RH_MEAS;
     if(write(fd, &cmd, 1) < 0)
         return 1;
     
+    timeA = time(NULL);
+    if(timeA == -1)
+        return -1;
+        
     do
     {
        //usleep(100); 
         rc = read(fd, buf + 2, 2);
+        timeB = time(NULL);
+        if(timeB == -1)
+            return -1;      
         if(rc < 0)
-            return -1;
+        {
+            if((timeB - timeA) > READ_TIMEOUT_SEC)            
+                return -1;
+        }
     }while(rc != 2);
 
     return 0;
@@ -198,15 +234,13 @@ int main (int argc,char** argv)
     while(argc < 2 || (argc >= 2 && cycles < iterations))
     {
         cycles++;
-        printf("4\n");
         if(measTemp(fd, buffer, sizeof(buffer)) != 0)
         {
             if(humanReadable)
                 printf("Temperature measurement failed.\n");
             return 1;
         }
-        printf("5\n");
-	
+        
         tempRead = buffer[0] << 8;
         tempRead |= buffer[1];
         temp = 175.72 * (double)tempRead / 65536 - 46.85;
