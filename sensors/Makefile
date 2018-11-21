@@ -17,7 +17,7 @@ SRC := $(wildcard *.c)
 # list holding the target names
 TARGET := $(SRC:%.c=$(OUT_DIR)/%)
 # files that should be copied to the output directory
-COPY_LIST := check_functionality logg
+COPY_LIST := check_functionality logg sensValues.txt
 
 all: | clean createDir $(TARGET) copy
 

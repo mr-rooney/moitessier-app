@@ -9,6 +9,16 @@ bus=/dev/i2c-1
 # Measurement cycles used by default.
 iterations=1
 
+# Default values for sanity check.
+temperature=30          # temperature in °C       
+temperatureRange=10     # actual range is temperature +/- temperatureRange
+pressure=1000           # pressure in mbar
+pressureRange=200       # actual range is pressure +/- pressureRange
+
+
+# The file where the sensor readouts should be stored.
+sensorFile=sensValues.txt
+
 help()
 {
     echo
@@ -16,8 +26,30 @@ help()
     echo "This script is used to check/read the sensors of the Moitessier HAT."
     echo       
     echo "One of the following options can be applied:"
-    echo "    -i : I2C interface used to communicate with the sensors. If not set ${bus} is used"
+    echo "    -i : I2C interface used to communicate with the sensors. If not set ${bus} is used."
     echo "    -c : Defines the number of measurement cycles/iterations. If not set ${iterations} cycle will be executed."
+    echo "    -s : Sanity check enabled"
+    echo "    -t : (mean) temperature used for sanity check. If not set ${temperature} is used."
+    echo "    -r : Maximum temperature deviation used for sanity check. If not set ${temperatureRange} is used."
+    echo "    -t : (mean) pressure used for sanity check. If not set ${pressure} is used."
+    echo "    -n : Maximum pressure deviation used for sanity check. If not set ${pressureRange} is used."
+    echo "    Define which sensor should be checked. You must set at least one of the following options:"
+    echo "        --all : Check/read all sensors"
+    echo "        --cpu : Check/read CPU temperature sensor"
+    echo "        --press : Check/read pressure sensor"
+    echo "        --hum : Check/read humidity sensor"
+    echo "        --mpu : Check/read MPU sensor"
+    echo "******************************************************************************************"
+    echo
+}
+
+error()
+{
+    echo
+    echo "******************************************************************************************"
+    echo "ERROR occured!!"
+    echo
+    echo $1
     echo "******************************************************************************************"
     echo
 }
@@ -45,10 +77,21 @@ function ctrl_c() {
 
 cOption=0
 iOption=0
+cpuOption=0
+pressureOption=0
+mpuOption=0
+humidityOption=0
+tOption=0
+rOption=0
+pOption=0
+nOption=0
+sOption=0
+sensValues=
+re='^[0-9]+$'
 
 help
 
-while getopts 'i:c:h' option
+while getopts "i:c:h-:t:r:p:n:s" option
 do
     case $option in
         i) iOption=1
@@ -56,6 +99,46 @@ do
             ;;
         c) cOption=1
            iterations="$OPTARG"
+            ;;
+        t) tOption=1
+           temperature="$OPTARG"
+            ;;            
+        r) rOption=1
+           temperatureRange="$OPTARG"
+            ;;            
+        p) pOption=1
+           pressure="$OPTARG"
+            ;;            
+        n) nOption=1
+           pressureRange="$OPTARG"
+            ;;          
+        s) sOption=1
+            ;;  
+        -)
+            case "${OPTARG}" in
+                all)
+                    cpuOption=1
+                    pressureOption=1
+                    mpuOption=1
+                    humidityOption=1
+                    ;;
+                cpu)
+                    cpuOption=1
+                    ;;
+                press)
+                    pressureOption=1
+                    ;;
+                mpu)
+                    mpuOption=1
+                    ;;
+                hum)
+                    humidityOption=1
+                    ;;
+                *) echo
+                    error "Invalid option."
+                    exit 1
+                    ;;                    
+            esac
             ;;
         h) exit 0
             ;;
@@ -69,48 +152,202 @@ done
 # calling path
 pwd="`dirname \"$0\"`"
 
-echo "********** CPU **********"
-cpuTempPath=/sys/class/thermal/thermal_zone0/temp
-if [ -f "$cpuTempPath" ]; then
-    for ((i=0; i < ${iterations}; i++))
-    do  
-        cpuTemp=$(cat /sys/class/thermal/thermal_zone0/temp)
-        cpuTemp=$(echo 3 k $cpuTemp 1000 / p | dc)
-        printf "${cpuTemp}\n"
-        sleep 0.2
-    done
-else
-    echo "Cannot get CPU temperature"    
-fi
-echo "********** MS5607-02BA03 **********"
-"${pwd}/MS5607-02BA03" ${bus} ${iterations}
-if [ $? -ne 0 ]
+if [ $sOption == "1" -a $iterations != "1" ]
 then
-    echo "Reading sensor failed."
-    echo "This might be okay, if this sensors is not assembled on the board."
+    error "Use -c 1 if -s is used."
     exit 1
 fi
-#sleep 3
-killProc "MS5607-02BA03"
-echo "********** MPU-9250 **********"
-"${pwd}/MPU-9250" ${bus} ${iterations}
-if [ $? -ne 0 ]
-then
-    echo "Reading sensor failed."
-    echo "This might be okay, if this sensors is not assembled on the board."
-    exit 1
-fi
-#sleep 3
-killProc "MPU-9250"
-echo "********** Si7020-A20 **********"
-"${pwd}/Si7020-A20" ${bus} ${iterations}
-if [ $? -ne 0 ]
-then
-    echo "Reading sensor failed."
-    echo "This might be okay, if this sensors is not assembled on the board."
-    exit 1
-fi
-#sleep 3
-killProc "Si7020-A20"
 
+if [ $cpuOption == "0" -a $mpuOption == "0" -a $pressureOption == "0" -a $humidityOption == "0" ]
+then
+    error "You must select at least one sensor to check/read."
+    exit 1
+fi
+
+if [ -e "${pwd}/${sensorFile}" ]
+then
+    rm "${pwd}/${sensorFile}"
+    if [ $? -ne 0 ]
+    then
+        error "Deleting file ${pwd}/${sensorFile} failed."
+        exit 1
+    fi
+fi
+
+temperatureLow=$(expr $temperature - $temperatureRange)
+temperatureHigh=$(expr $temperature + $temperatureRange)
+
+pressureLow=$(expr $pressure - $pressureRange)
+pressureHigh=$(expr $pressure + $pressureRange)
+
+if [ $sOption == "1" ]
+then
+    echo "Sanity check ranges:"
+    echo "    temperature:  ${temperatureLow}...${temperatureHigh}"  
+    echo "    pressure:     ${pressureLow}...${pressureHigh}"
+    echo
+fi
+
+if [ $cpuOption == "1" ]
+then
+    echo "********** CPU **********"
+    cpuTempPath=/sys/class/thermal/thermal_zone0/temp
+    if [ -f "$cpuTempPath" ]; then
+        for ((i=0; i < ${iterations}; i++))
+        do  
+            cpuTemp=$(cat /sys/class/thermal/thermal_zone0/temp)
+            cpuTemp=$(echo 3 k $cpuTemp 1000 / p | dc)
+            printf "${cpuTemp}\n"
+            sleep 0.2
+        done
+    else
+        echo "ERROR: Cannot get CPU temperature"    
+    fi
+    
+    if [ $sOption == "1" ]
+    then
+        sensValues=$(echo "${sensValues}cpuTemp:${cpuTemp};")  
+    fi
+    
+    #cpu=${cpuTemp%%.*}
+    #if [ $cpu -gt $temperatureHigh -o $cpu -lt $temperatureLow ]
+    #then
+    #    echo "Temperature out of range."
+    #fi
+fi
+
+if [ $pressureOption == "1" ]
+then    
+    echo "********** MS5607-02BA03 **********"
+    cmd=""${pwd}/MS5607-02BA03" ${bus} ${iterations})"
+    if [ $sOption == "1" ]
+    then
+        pressureTemp=$($cmd)
+    else
+        $cmd
+    fi
+    
+    if [ $? -ne 0 ]
+    then
+        echo "ERROR: Reading sensor failed."
+        echo "This might be okay, if this sensors is not assembled on the board."
+        exit 1
+    else
+        echo $pressureTemp;
+        
+        # extract temperature value
+        temp=$(echo $pressureTemp | sed 's/.*, //' | sed 's/ .*//')
+        
+        # extract pressure value
+        pressure=$(echo $pressureTemp | sed 's/ mbar.*//')
+        
+        if [ $sOption == "1" ]
+        then
+            # convert float to integer
+            tempInt=${temp%%.*}
+            
+            if ! [[ $tempInt =~ $re ]] ; then
+               echo "ERROR: ${tempInt}"
+            else            
+                # check if temperature is valid
+                if [ $tempInt -gt $temperatureHigh -o $tempInt -lt $temperatureLow ]
+                then
+                    echo "ERROR: Temperature out of range. The sensor might not work properly."
+                    sensValues=$(echo "${sensValues}pressureTemp:x;")  
+                else
+                    sensValues=$(echo "${sensValues}pressureTemp:${temp};")
+                fi  
+            fi
+            
+            # convert float to integer
+            pressureInt=${pressure%%.*}
+                
+            if ! [[ $pressureInt =~ $re ]] ; then
+               echo "ERROR: ${pressureInt}"
+            else     
+                # check if pressure is valid
+                if [ $pressureInt -gt $pressureHigh -o $pressureInt -lt $pressureLow ]
+                then
+                    echo "ERROR: Pressure out of range. The sensor might not work properly."
+                    sensValues=$(echo "${sensValues}pressure:x;")  
+                else
+                    sensValues=$(echo "${sensValues}pressure:${pressure};")
+                fi  
+            fi    
+        fi
+    fi
+    #sleep 3
+    killProc "MS5607-02BA03"
+fi
+
+
+if [ $mpuOption == "1" ]
+then
+    echo "********** MPU-9250 **********"
+    cmd=""${pwd}/MPU-9250" ${bus} ${iterations})"
+    if [ $sOption == "1" ]
+    then
+        mpuTemp=$($cmd)    
+    else
+        $cmd
+    fi
+    
+    if [ $? -ne 0 ]
+    then
+        echo "ERROR: Reading sensor failed."
+        echo "This might be okay, if this sensors is not assembled on the board."
+        exit 1
+    else
+        echo $mpuTemp;
+        
+        # extract temperature value
+        temp=$(echo $mpuTemp | sed 's/ .*//')
+        
+        if [ $sOption == "1" ]
+        then
+            # convert float to integer
+            tempInt=${temp%%.*}
+            
+            # check if temperature is valid
+            if ! [[ $tempInt =~ $re ]] ; then
+               echo "ERROR: ${tempInt}"
+            else
+                if [ $tempInt -gt $temperatureHigh -o $tempInt -lt $temperatureLow ]
+                then
+                    echo "ERROR: Temperature out of range. The sensor might not work properly."
+                    sensValues=$(echo "${sensValues}mpuTemp:x;")  
+                else
+                    sensValues=$(echo "${sensValues}mpuTemp:${temp};")
+                fi  
+            fi
+        fi
+    fi
+    #sleep 3
+    killProc "MPU-9250"
+fi
+
+if [ $humidityOption == "1" ]
+then
+    echo "********** Si7020-A20 **********"
+    cmd=""${pwd}/Si7020-A20" ${bus} ${iterations})"
+    hum=$($cmd)
+    
+    if [ $? -ne 0 ]
+    then
+        echo "ERROR: Reading sensor failed."
+        echo "This might be okay, if this sensors is not assembled on the board."
+    else
+        echo $hum;
+    fi
+    #sleep 3
+    killProc "Si7020-A20"
+fi    
+
+if [ $sOption == "1" ]
+then
+    echo
+    echo ${sensValues} > "${pwd}/${sensorFile}"
+    echo "Sensor data written to ${pwd}/${sensorFile}"
+fi   
+ 
 exit 0
