@@ -101,6 +101,7 @@ struct st_info{
     struct st_info_rcv          rcv[NUM_RCV];
     struct st_simulator         simulator;
     uint8_t                     wpEEPROM;
+    uint8_t                     buttonPressed;
     bool        valid;
 };
 
@@ -302,6 +303,7 @@ int main (int argc,char** argv)
                     printf("\tmmsi:\t\t\t\t %09u %09u\n", (unsigned int)info->simulator.mmsi[0], (unsigned int)info->simulator.mmsi[1]);
                     printf("misc\n");
                     printf("\twrite protection ID EEPROM:\t %u\n", (unsigned int)info->wpEEPROM);
+                    printf("\twrite button pressed:\t\t %u\n", (unsigned int)info->buttonPressed);
                     
                     if(info->systemErrors)
                         printf("\n\n***** SYSTEM ERRORS HAVE OCCURRED *****\n\n");
