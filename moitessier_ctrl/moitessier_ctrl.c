@@ -144,16 +144,16 @@ int main (int argc,char** argv)
     if(argc < 3)
     {
         printf("ERROR: missing parameters\n");
-        printf("Usage: ./moitessier_ctrl <DEVICE> <CMD_NR> <PARAM> <PARAM> ... <PARAM>\n");
-        printf("\tRead HAT statistics:\t\t\t ./moitessier_ctrl /dev/moitessier.ctrl 0\n");
-        printf("\tGet HAT info:\t\t\t\t ./moitessier_ctrl /dev/moitessier.ctrl 1\n");
-        printf("\tReset HAT:\t\t\t\t ./moitessier_ctrl /dev/moitessier.ctrl 2\n");
-        printf("\tReset HAT statistics:\t\t\t ./moitessier_ctrl /dev/moitessier.ctrl 3\n");
-        printf("\tEnable GNSS:\t\t\t\t ./moitessier_ctrl /dev/moitessier.ctrl 4 1\n");
-        printf("\tDisable GNSS:\t\t\t\t ./moitessier_ctrl /dev/moitessier.ctrl 4 0\n");
-        printf("\tConfigure HAT:\t\t\t\t ./moitessier_ctrl /dev/moitessier.ctrl 5 config.xml\n");
-        printf("\tEnable ID EEPROM write protection:\t ./moitessier_ctrl /dev/moitessier.ctrl 6 1\n");
-        printf("\tDisable ID EEPROM write protection:\t ./moitessier_ctrl /dev/moitessier.ctrl 6 0\n");
+        printf("Usage: %s <DEVICE> <CMD_NR> <PARAM> <PARAM> ... <PARAM>\n", argv[0]);
+        printf("\tRead HAT statistics:\t\t\t %s /dev/moitessier.ctrl 0\n", argv[0]);
+        printf("\tGet HAT info:\t\t\t\t %s /dev/moitessier.ctrl 1\n", argv[0]);
+        printf("\tReset HAT:\t\t\t\t %s /dev/moitessier.ctrl 2\n", argv[0]);
+        printf("\tReset HAT statistics:\t\t\t %s /dev/moitessier.ctrl 3\n", argv[0]);
+        printf("\tEnable GNSS:\t\t\t\t %s /dev/moitessier.ctrl 4 1\n", argv[0]);
+        printf("\tDisable GNSS:\t\t\t\t %s /dev/moitessier.ctrl 4 0\n", argv[0]);
+        printf("\tConfigure HAT:\t\t\t\t %s /dev/moitessier.ctrl 5 config.xml\n", argv[0]);
+        printf("\tEnable ID EEPROM write protection:\t %s /dev/moitessier.ctrl 6 1\n", argv[0]);
+        printf("\tDisable ID EEPROM write protection:\t %s /dev/moitessier.ctrl 6 0\n", argv[0]);
         return -1;
     }
     
