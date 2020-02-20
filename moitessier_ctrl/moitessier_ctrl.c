@@ -50,7 +50,7 @@
 
 
 #define IOC_MAGIC 'N'
-#define IOCTL_CMDs                  7
+#define IOCTL_CMDs                  8
 #define IOCTL_GET_STATISTICS        _IO(IOC_MAGIC,0)
 #define IOCTL_GET_INFO              _IO(IOC_MAGIC,1)
 #define IOCTL_RESET_HAT             _IO(IOC_MAGIC,2)
@@ -58,6 +58,7 @@
 #define IOCTL_GNSS                  _IO(IOC_MAGIC,4)
 #define IOCTL_CONFIG                _IO(IOC_MAGIC,5)
 #define IOCTL_ID_EEPROM             _IO(IOC_MAGIC,6)
+#define IOCTL_GNSS_MSG_CONFIG       _IO(IOC_MAGIC,7)
 
 #define NUM_RCV_CHANNELS            2       /* number of receiver channels per receiver, should be 2 */
 #define NUM_RCV                     2       /* number of receivers, should be 2 */
@@ -154,6 +155,8 @@ int main (int argc,char** argv)
         printf("\tConfigure HAT:\t\t\t\t %s /dev/moitessier.ctrl 5 config.xml\n", argv[0]);
         printf("\tEnable ID EEPROM write protection:\t %s /dev/moitessier.ctrl 6 1\n", argv[0]);
         printf("\tDisable ID EEPROM write protection:\t %s /dev/moitessier.ctrl 6 0\n", argv[0]);
+        printf("\tEnable all GNSS sentences:\t\t %s /dev/moitessier.ctrl 7 255\n", argv[0]);
+        printf("\tEnable only GNSS RMC sentence:\t\t %s /dev/moitessier.ctrl 7 1\n", argv[0]);
         return -1;
     }
     
@@ -250,6 +253,10 @@ int main (int argc,char** argv)
                 ioctlCmd = IOCTL_ID_EEPROM;
                 buf[0] = (char)params[0];
                 break;
+            case 7:
+                ioctlCmd = IOCTL_GNSS_MSG_CONFIG;
+                buf[0] = (char)params[0];
+                break;
             default:
                 break;
         }
@@ -342,6 +349,9 @@ int main (int argc,char** argv)
                 printf("misc\n");
                 printf("\twrite protection ID EEPROM:\t %u\n", (unsigned int)configHAT.wpEEPROM);
                 
+                break;
+            case 7:
+                printf("GNSS message configuration = %u\n", (uint8_t)params[0]);
                 break;
             default:
                 break;
