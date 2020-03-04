@@ -19,6 +19,12 @@ pressureRange=200       # actual range is pressure +/- pressureRange
 # The file where the sensor readouts should be stored.
 sensorFile=sensValues.txt
 
+# https://misc.flogisoft.com/bash/tip_colors_and_formatting
+FORMAT_RED="\e[1;31m"
+FORMAT_YELLOW="\e[1;93m"
+FORMAT_GREEN="\e[1;32m"
+FORMAT_DEFAULT="\e[0m"
+
 help()
 {
     echo
@@ -47,8 +53,28 @@ error()
 {
     echo
     echo "******************************************************************************************"
-    echo "ERROR occured!!"
+    echo -e "${FORMAT_RED}ERROR occured!!${FORMAT_DEFAULT}"
     echo
+    echo -e "${FORMAT_RED}${1}${FORMAT_DEFAULT}"
+    echo "******************************************************************************************"
+    echo
+}
+
+warning()
+{
+    echo
+    echo "******************************************************************************************"
+    echo -e "${FORMAT_YELLOW}WARNING!!${FORMAT_DEFAULT}"
+    echo
+    echo -e "${FORMAT_YELLOW}${1}${FORMAT_DEFAULT}"
+    echo "******************************************************************************************"
+    echo
+}
+
+info()
+{
+    echo
+    echo "******************************************************************************************"
     echo $1
     echo "******************************************************************************************"
     echo
@@ -202,7 +228,7 @@ then
             sleep 0.2
         done
     else
-        echo "ERROR: Cannot get CPU temperature"    
+        error "Cannot get CPU temperature"    
         exit 1
     fi
     
@@ -231,8 +257,8 @@ then
     
     if [ $? -ne 0 ]
     then
-        echo "ERROR: Reading sensor failed."
-        echo "This might be okay, if this sensors is not assembled on the board."
+        error "Reading sensor failed"
+        warning "This might be okay, if this sensors is not assembled on the board."
         exit 1
     else
         echo $pressureTemp;
@@ -250,13 +276,13 @@ then
             
             if ! [[ $tempInt =~ $re ]]
             then
-                echo "ERROR: ${tempInt}"
+                error "${tempInt}"
                 exit 1
             else            
                 # check if temperature is valid
                 if [ $tempInt -gt $temperatureHigh -o $tempInt -lt $temperatureLow ]
                 then
-                    echo "ERROR: Temperature out of range. The sensor might not work properly."
+                    error "Temperature out of range. The sensor might not work properly."
                     sensValues=$(echo "${sensValues}pressureTemp:x;")
                     sanityCheckFailed=1  
                 else
@@ -269,13 +295,13 @@ then
                 
             if ! [[ $pressureInt =~ $re ]]
             then
-                echo "ERROR: ${pressureInt}"
+                error "${pressureInt}"
                 exit 1
             else     
                 # check if pressure is valid
                 if [ $pressureInt -gt $pressureHigh -o $pressureInt -lt $pressureLow ]
                 then
-                    echo "ERROR: Pressure out of range. The sensor might not work properly."
+                    error "Pressure out of range. The sensor might not work properly."
                     sensValues=$(echo "${sensValues}pressure:x;")  
                     sanityCheckFailed=1
                 else
@@ -302,8 +328,8 @@ then
     
     if [ $? -ne 0 ]
     then
-        echo "ERROR: Reading sensor failed."
-        echo "This might be okay, if this sensors is not assembled on the board."
+        error "Reading sensor failed."
+        warning "This might be okay, if this sensors is not assembled on the board."
         exit 1
     else
         echo $mpuTemp;
@@ -319,12 +345,12 @@ then
             # check if temperature is valid
             if ! [[ $tempInt =~ $re ]]
             then
-                echo "ERROR: ${tempInt}"
+                error "${tempInt}"
                 exit 1
             else
                 if [ $tempInt -gt $temperatureHigh -o $tempInt -lt $temperatureLow ]
                 then
-                    echo "ERROR: Temperature out of range. The sensor might not work properly."
+                    error "Temperature out of range. The sensor might not work properly."
                     sensValues=$(echo "${sensValues}mpuTemp:x;")  
                     sanityCheckFailed=1
                 else
@@ -345,8 +371,8 @@ then
     
     if [ $? -ne 0 ]
     then
-        echo "ERROR: Reading sensor failed."
-        echo "This might be okay, if this sensors is not assembled on the board."
+        error "Reading sensor failed."
+        warning "This might be okay, if this sensors is not assembled on the board."
     else
         echo $hum;
     fi
@@ -358,7 +384,7 @@ if [ $sOption == "1" ]
 then
     echo
     echo ${sensValues} > "${pwd}/${sensorFile}"
-    echo "Sensor data written to ${pwd}/${sensorFile}"
+    info "Sensor data written to \"${pwd}/${sensorFile}\""
 fi   
 
 if [ $sanityCheckFailed -eq 1 ]

@@ -103,7 +103,9 @@ struct st_info{
     struct st_simulator         simulator;
     uint8_t                     wpEEPROM;
     uint8_t                     buttonPressed;
-    bool        valid;
+    uint8_t                     gnssVer[32];        
+    uint8_t                     gnssSysSupported;
+    bool                        valid;
 };
 
 struct st_statistics{
@@ -122,6 +124,27 @@ struct st_configHAT{
     uint8_t                     wpEEPROM;
 };
 
+#define PATH_MAX        1024
+char* app_path(char * path, const char * argv0)
+{
+    char buf[PATH_MAX];
+    char * pos;
+    if (argv0[0] == '/') {    // run with absolute path
+        strcpy(buf, argv0);
+    } else {    // run with relative path
+        if(NULL == getcwd(buf, PATH_MAX)) {
+            perror("getcwd error");
+            return NULL;
+        }
+        strcat(buf, "/");
+        strcat(buf, argv0);
+    }
+    if (NULL == realpath(buf, path)) {
+        perror("realpath error");
+        return NULL;
+    }
+    return path;
+}
 
 int main (int argc,char** argv)
 {
@@ -141,6 +164,10 @@ int main (int argc,char** argv)
     struct st_statistics *statistics;
     struct st_configHAT configHAT;
     
+    app_path(buf, argv[0]);
+    char *temp;
+    temp = strrchr(buf,'/');  
+    *temp = '\0';             
     
     if(argc < 3)
     {
@@ -152,13 +179,15 @@ int main (int argc,char** argv)
         printf("\tReset HAT statistics:\t\t\t %s /dev/moitessier.ctrl 3\n", argv[0]);
         printf("\tEnable GNSS:\t\t\t\t %s /dev/moitessier.ctrl 4 1\n", argv[0]);
         printf("\tDisable GNSS:\t\t\t\t %s /dev/moitessier.ctrl 4 0\n", argv[0]);
-        printf("\tConfigure HAT:\t\t\t\t %s /dev/moitessier.ctrl 5 config.xml\n", argv[0]);
+        printf("\tConfigure HAT:\t\t\t\t %s /dev/moitessier.ctrl 5 %s/config.xml\n", argv[0], buf);
         printf("\tEnable ID EEPROM write protection:\t %s /dev/moitessier.ctrl 6 1\n", argv[0]);
         printf("\tDisable ID EEPROM write protection:\t %s /dev/moitessier.ctrl 6 0\n", argv[0]);
         printf("\tEnable all GNSS sentences:\t\t %s /dev/moitessier.ctrl 7 255\n", argv[0]);
         printf("\tEnable only GNSS RMC sentence:\t\t %s /dev/moitessier.ctrl 7 1\n", argv[0]);
         return -1;
     }
+    
+    memset(buf, 0, sizeof(buf));
     
     fd_moitessier = open(argv[1], O_RDONLY);
     cmd = atoi(argv[2]);
@@ -285,6 +314,7 @@ int main (int argc,char** argv)
                     printf("hardware version - %s\n", (char*)info->hwVer);
                     printf("boot version - %s\n", (char*)info->bootVer);
                     printf("app version - %s\n", (char*)info->appVer);
+                    printf("gnss version - %s\n", (char*)info->gnssVer);
                     printf("functionality - 0x%08x\n", (unsigned int)info->functionality);
                     printf("system errors - 0x%08x\n", (unsigned int)info->systemErrors);
                     printf("serial - %08x%08x%08x\n", (unsigned int)info->serial.h, (unsigned int)info->serial.m, (unsigned int)info->serial.l);
@@ -311,6 +341,7 @@ int main (int argc,char** argv)
                     printf("misc\n");
                     printf("\twrite protection ID EEPROM:\t %u\n", (unsigned int)info->wpEEPROM);
                     printf("\twrite button pressed:\t\t %u\n", (unsigned int)info->buttonPressed);
+                    printf("\tgnss satellite systems:\t\t %u\n", (unsigned int)info->gnssSysSupported);
                     
                     if(info->systemErrors)
                         printf("\n\n***** SYSTEM ERRORS HAVE OCCURRED *****\n\n");
