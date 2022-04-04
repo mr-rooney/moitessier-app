@@ -43,7 +43,9 @@
 #include <sys/poll.h>
 #include <stdlib.h>
 #include <sys/ioctl.h>
+#if HAVE_STROPTS_H
 #include <stropts.h>
+#endif /* HAVE_STROPTS_H */
 #include <stdint.h>
 #include <stdbool.h>
 #include "ezxml/ezxml.h"
